@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'about_screen.dart';
+import 'home_screen.dart';
 
 class StationDetailsScreen extends StatelessWidget {
   final String stationName;
@@ -37,6 +39,38 @@ class StationDetailsScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 2,
+
+        onTap: (index) {
+          if (index == 0) {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+              (route) => false,
+            );
+          }
+           if (index == 2) {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => const AboutScreen()),
+              (route) => false,
+            );
+          }
+        },
+
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.star_border),
+            label: "Favorites",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.info_outline),
+            label: "About",
+          ),
+        ],
       ),
 
       body: SingleChildScrollView(
