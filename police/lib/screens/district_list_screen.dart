@@ -2,47 +2,69 @@ import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'station_list_screen.dart';
 import 'about_screen.dart';
+import '../services/api_service.dart';
 
 class DistrictListScreen extends StatefulWidget {
-   const DistrictListScreen({super.key});
+  const DistrictListScreen({super.key});
 
   @override
-  State<DistrictListScreen> createState() =>
-      _DistrictListScreenState();
+  State<DistrictListScreen> createState() => _DistrictListScreenState();
 }
 
-class _DistrictListScreenState
-    extends State<DistrictListScreen> {
+class _DistrictListScreenState extends State<DistrictListScreen> {
+  final TextEditingController searchController = TextEditingController();
 
-  final TextEditingController searchController =
-      TextEditingController();
-
-  final List<Map<String, dynamic>> districts = [
-    {"name": "Chennai", "stations": 38},
-    {"name": "Coimbatore", "stations": 42},
-    {"name": "Madurai", "stations": 31},
-    {"name": "Salem", "stations": 28},
-    {"name": "Trichy", "stations": 35},
-    {"name": "Tirunelveli", "stations": 26},
-    {"name": "Erode", "stations": 20},
-    {"name": "Vellore", "stations": 24},
-    {"name": "Thanjavur", "stations": 19},
-    {"name": "Kanyakumari", "stations": 18},
-  ];
+  List<dynamic> districts = [];
+  bool isLoading = true;
 
   String searchText = "";
 
   @override
-  Widget build(BuildContext context) {
+  void initState() {
+    super.initState();
+    loadDistricts();
+  }
 
+  Future<void> loadDistricts() async {
+    try {
+      print("Calling District API...");
+
+      final data = await ApiService.getDistricts();
+
+      print("API Response:");
+      print(data);
+
+      setState(() {
+        districts = data;
+        isLoading = false;
+      });
+
+      print("District Count: ${districts.length}");
+    } catch (e) {
+      print("API ERROR: $e");
+
+      setState(() {
+        isLoading = false;
+      });
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("No internet connection. Please check your network."),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final filteredDistricts = districts
         .where(
-          (district) => district["name"]
+          (district) => district["districtName"]
               .toString()
               .toLowerCase()
-              .contains(
-                searchText.toLowerCase(),
-              ),
+              .contains(searchText.toLowerCase()),
         )
         .toList();
 
@@ -50,17 +72,13 @@ class _DistrictListScreenState
       backgroundColor: Colors.white,
 
       appBar: AppBar(
-        backgroundColor:
-            const Color(0xFF0B57D0),
+        backgroundColor: const Color(0xFF0B57D0),
         foregroundColor: Colors.white,
-
-        title: const Text(
-          "Districts",
-        ),
+        title: const Text("Districts"),
       ),
 
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 2,
+        currentIndex: 0,
 
         onTap: (index) {
           if (index == 0) {
@@ -70,7 +88,8 @@ class _DistrictListScreenState
               (route) => false,
             );
           }
-           if (index == 2) {
+
+          if (index == 2) {
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (_) => const AboutScreen()),
@@ -94,14 +113,11 @@ class _DistrictListScreenState
 
       body: Column(
         children: [
-
           Padding(
-            padding:
-                const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
 
             child: TextField(
-              controller:
-                  searchController,
+              controller: searchController,
 
               onChanged: (value) {
                 setState(() {
@@ -109,115 +125,84 @@ class _DistrictListScreenState
                 });
               },
 
-              decoration:
-                  InputDecoration(
-                hintText:
-                    "Search district...",
-
-                prefixIcon:
-                    const Icon(
-                  Icons.search,
-                ),
+              decoration: InputDecoration(
+                hintText: "Search district...",
+                prefixIcon: const Icon(Icons.search),
 
                 filled: true,
+                fillColor: Colors.grey.shade100,
 
-                fillColor:
-                    Colors.grey.shade100,
-
-                border:
-                    OutlineInputBorder(
-                  borderRadius:
-                      BorderRadius
-                          .circular(
-                    12,
-                  ),
-
-                  borderSide:
-                      BorderSide.none,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
                 ),
               ),
             ),
           ),
 
           Expanded(
-            child: ListView.builder(
-              itemCount:
-                  filteredDistricts.length,
-
-              itemBuilder:
-                  (context, index) {
-
-                final district =
-                    filteredDistricts[
-                        index];
-
-                return ListTile(
-
-                  leading: Container(
-                    width: 42,
-                    height: 42,
-
-                    decoration:
-                        BoxDecoration(
-                      color: Colors
-                          .blue
-                          .shade50,
-
-                      borderRadius:
-                          BorderRadius
-                              .circular(
-                        10,
-                      ),
-                    ),
-
-                    child: const Icon(
-                      Icons.location_city,
-                      color:
-                          Color(
-                        0xFF0B57D0,
-                      ),
-                    ),
-                  ),
-
-                  title: Text(
-                    district["name"],
-                    style:
-                        const TextStyle(
-                      fontWeight:
-                          FontWeight
-                              .bold,
-                    ),
-                  ),
-
-                  subtitle: Text(
-                    "${district["stations"]} Stations",
-                  ),
-
-                  trailing: const Icon(
-                    Icons
-                        .arrow_forward_ios,
-                    size: 16,
-                  ),
-
-                  onTap: () {
-
-                    Navigator.push(
-                      context,
-
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            StationListScreen(
-                          district:
-                              district[
-                                  "name"],
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : districts.isEmpty
+                ? const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.wifi_off, size: 60, color: Colors.grey),
+                        SizedBox(height: 10),
+                        Text(
+                          "Unable to load districts",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                    );
+                        SizedBox(height: 5),
+                        Text(
+                          "Check your internet connection",
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: filteredDistricts.length,
+                    itemBuilder: (context, index) {
+                      final district = filteredDistricts[index];
 
-                  },
-                );
-              },
-            ),
+                      return ListTile(
+                        leading: Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.location_city,
+                            color: Color(0xFF0B57D0),
+                          ),
+                        ),
+                        title: Text(
+                          district["districtName"],
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: const Text("Police Stations"),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => StationListScreen(
+                                districtId: district["_id"],
+                                district: district["districtName"],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
           ),
         ],
       ),

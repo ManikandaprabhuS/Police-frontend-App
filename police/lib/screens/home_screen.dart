@@ -2,12 +2,74 @@ import 'package:flutter/material.dart';
 import 'station_list_screen.dart';
 import 'district_list_screen.dart';
 import 'about_screen.dart';
+import '../services/api_service.dart';
+import 'station_details_screen.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class HomeScreen extends StatefulWidget {
+  final String district;
+
+  const HomeScreen({super.key, this.district = ""});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final TextEditingController searchController = TextEditingController();
+
+  List<dynamic> districts = [];
+  List<dynamic> stations = [];
+
+  bool isLoading = true;
+  String searchText = "";
+
+  List<dynamic> get filteredDistricts {
+    return districts.where((district) {
+      return district["districtName"].toString().toLowerCase().contains(
+        searchText.toLowerCase(),
+      );
+    }).toList();
+  }
+
+  List<dynamic> get filteredStations {
+    return stations.where((station) {
+      return station["stationName"].toString().toLowerCase().contains(
+        searchText.toLowerCase(),
+      );
+    }).toList();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadData();
+  }
+
+  Future<void> loadData() async {
+    try {
+      final districtData = await ApiService.getDistricts();
+
+      final stationData = await ApiService.getStations();
+
+      setState(() {
+        districts = districtData;
+        stations = stationData;
+        isLoading = false;
+      });
+    } catch (e) {
+      print("HOME API ERROR: $e");
+
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
       backgroundColor: Colors.white,
 
@@ -15,6 +77,13 @@ class HomeScreen extends StatelessWidget {
         currentIndex: 0,
 
         onTap: (index) {
+          if (index == 0) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+            );
+          }
+
           if (index == 2) {
             Navigator.push(
               context,
@@ -77,7 +146,48 @@ class HomeScreen extends StatelessWidget {
 
                 const SizedBox(height: 25),
 
+                // Container(
+                //   padding: const EdgeInsets.symmetric(
+                //     horizontal: 12,
+                //     vertical: 10,
+                //   ),
+                //   decoration: BoxDecoration(
+                //     color: Colors.blue.shade50,
+                //     borderRadius: BorderRadius.circular(12),
+                //   ),
+                //   child: Row(
+                //     children: [
+                //       const Icon(
+                //         Icons.location_on,
+                //         color: Colors.red,
+                //       ),
+
+                //       const SizedBox(width: 8),
+
+                //       Expanded(
+                //         child: Text(
+                //           district.isEmpty
+                //               ? "Location: Not Selected"
+                //               : district,
+                //           style: const TextStyle(
+                //             fontWeight: FontWeight.w600,
+                //           ),
+                //         ),
+                //       ),
+                //     ],
+                //   ),
+                // ),
+                const SizedBox(height: 20),
+
                 TextField(
+                  controller: searchController,
+
+                  onChanged: (value) {
+                    setState(() {
+                      searchText = value;
+                    });
+                  },
+
                   decoration: InputDecoration(
                     hintText: "Search district or station",
                     prefixIcon: const Icon(Icons.search),
@@ -91,8 +201,75 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 25),
+                if (searchText.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 20),
+
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+
+                    child: Column(
+                      children: [
+                        if (filteredDistricts.isEmpty &&
+                            filteredStations.isEmpty)
+                          const ListTile(title: Text("No results found")),
+                        ...filteredDistricts.map(
+                          (district) => ListTile(
+                            leading: const Icon(
+                              Icons.location_city,
+                              color: Colors.blue,
+                            ),
+
+                            title: Text(district["districtName"]),
+
+                            subtitle: const Text("District"),
+
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => StationListScreen(
+                                    districtId: district["_id"],
+                                    district: district["districtName"],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+
+                        ...filteredStations.map(
+                          (station) => ListTile(
+                            leading: const Icon(
+                              Icons.local_police,
+                              color: Colors.green,
+                            ),
+
+                            title: Text(station["stationName"]),
+
+                            subtitle: Text(
+                              station["districtId"]?["districtName"] ?? "",
+                            ),
+
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => StationDetailsScreen(
+                                    stationId: station["_id"],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -111,7 +288,7 @@ class HomeScreen extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => DistrictListScreen(),
+                            builder: (_) => const DistrictListScreen(),
                           ),
                         );
                       },
@@ -138,19 +315,15 @@ class HomeScreen extends StatelessWidget {
                   mainAxisSpacing: 12,
                   childAspectRatio: 1.5,
 
-                  children: const [
-                    DistrictCard(district: "Chennai"),
-
-                    DistrictCard(district: "Coimbatore"),
-
-                    DistrictCard(district: "Madurai"),
-
-                    DistrictCard(district: "Salem"),
-
-                    DistrictCard(district: "Trichy"),
-
-                    DistrictCard(district: "Tirunelveli"),
-                  ],
+                  children: districts
+                      .take(6)
+                      .map(
+                        (district) => DistrictCard(
+                          districtId: district["_id"],
+                          district: district["districtName"],
+                        ),
+                      )
+                      .toList(),
                 ),
 
                 const SizedBox(height: 25),
@@ -209,8 +382,13 @@ class HomeScreen extends StatelessWidget {
 
 class DistrictCard extends StatelessWidget {
   final String district;
+  final String districtId;
 
-  const DistrictCard({super.key, required this.district});
+  const DistrictCard({
+    super.key,
+    required this.district,
+    required this.districtId,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -219,7 +397,8 @@ class DistrictCard extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => StationListScreen(district: district),
+            builder: (_) =>
+                StationListScreen(districtId: districtId, district: district),
           ),
         );
       },

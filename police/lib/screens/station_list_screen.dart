@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:police/screens/about_screen.dart';
+import 'package:police/services/api_service.dart';
 import 'home_screen.dart';
 import 'station_details_screen.dart';
 
 class StationListScreen extends StatefulWidget {
+  final String districtId;
   final String district;
 
   const StationListScreen({
     super.key,
+    required this.districtId,
     required this.district,
   });
 
@@ -18,27 +21,61 @@ class StationListScreen extends StatefulWidget {
 
 class _StationListScreenState
     extends State<StationListScreen> {
-
   final TextEditingController searchController =
       TextEditingController();
 
   String searchText = "";
 
-  final List<String> stations = [
-    "Peelamedu Police Station",
-    "Saravanampatti Police Station",
-    "Airport Police Station",
-    "B-7 Ramanathapuram Police Station",
-    "Race Course Police Station",
-    "Ganapathy Police Station",
-  ];
+  List<dynamic> stations = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    loadStations();
+  }
+
+  Future<void> loadStations() async {
+    try {
+      final data =
+          await ApiService.getStationsByDistrict(
+        widget.districtId,
+      );
+
+      setState(() {
+        stations = data;
+        isLoading = false;
+      });
+
+      print(
+        "Station Count: ${stations.length}",
+      );
+    } catch (e) {
+      print("STATION API ERROR: $e");
+
+      setState(() {
+        isLoading = false;
+      });
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Unable to load stations",
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-
     final filteredStations = stations
         .where(
-          (station) => station
+          (station) => station["stationName"]
+              .toString()
               .toLowerCase()
               .contains(
                 searchText.toLowerCase(),
@@ -51,15 +88,14 @@ class _StationListScreenState
 
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: const Color(0xFF0B57D0),
+        backgroundColor:
+            const Color(0xFF0B57D0),
         foregroundColor: Colors.white,
 
         title: Column(
           crossAxisAlignment:
               CrossAxisAlignment.start,
-
           children: [
-
             Text(
               "${widget.district} District",
               style: const TextStyle(
@@ -68,7 +104,6 @@ class _StationListScreenState
                     FontWeight.bold,
               ),
             ),
-
             Text(
               "${filteredStations.length} Stations",
               style: const TextStyle(
@@ -77,26 +112,19 @@ class _StationListScreenState
             ),
           ],
         ),
-
-        actions: [
-
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(
-              Icons.star_border,
-            ),
-          ),
-        ],
       ),
 
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 2,
+        currentIndex: 0,
 
         onTap: (index) {
           if (index == 0) {
             Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
+              MaterialPageRoute(
+                builder: (_) =>
+                    const HomeScreen(),
+              ),
               (route) => false,
             );
           }
@@ -104,14 +132,20 @@ class _StationListScreenState
           if (index == 2) {
             Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(builder: (_) => const AboutScreen()),
+              MaterialPageRoute(
+                builder: (_) =>
+                    const AboutScreen(),
+              ),
               (route) => false,
             );
           }
         },
 
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: "Home",
+          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.star_border),
             label: "Favorites",
@@ -125,14 +159,12 @@ class _StationListScreenState
 
       body: Column(
         children: [
-
           Padding(
             padding:
                 const EdgeInsets.all(16),
 
             child: Row(
               children: [
-
                 Expanded(
                   child: TextField(
                     controller:
@@ -148,23 +180,20 @@ class _StationListScreenState
                         InputDecoration(
                       hintText:
                           "Search station...",
-
                       prefixIcon:
                           const Icon(
                         Icons.search,
                       ),
-
                       filled: true,
-
                       fillColor:
                           Colors.grey.shade100,
-
                       border:
                           OutlineInputBorder(
                         borderRadius:
-                            BorderRadius.circular(
-                                12),
-
+                            BorderRadius
+                                .circular(
+                          12,
+                        ),
                         borderSide:
                             BorderSide.none,
                       ),
@@ -177,17 +206,16 @@ class _StationListScreenState
                 Container(
                   height: 50,
                   width: 50,
-
                   decoration:
                       BoxDecoration(
                     color:
                         Colors.grey.shade100,
-
                     borderRadius:
-                        BorderRadius.circular(
-                            12),
+                        BorderRadius
+                            .circular(
+                      12,
+                    ),
                   ),
-
                   child: const Icon(
                     Icons.filter_alt_outlined,
                   ),
@@ -197,24 +225,41 @@ class _StationListScreenState
           ),
 
           Expanded(
-            child: ListView.builder(
-              padding:
-                  const EdgeInsets.symmetric(
-                horizontal: 16,
-              ),
+            child: isLoading
+                ? const Center(
+                    child:
+                        CircularProgressIndicator(),
+                  )
+                : filteredStations.isEmpty
+                    ? const Center(
+                        child: Text(
+                          "No stations found",
+                        ),
+                      )
+                    : ListView.builder(
+                        padding:
+                            const EdgeInsets
+                                .symmetric(
+                          horizontal: 16,
+                        ),
 
-              itemCount:
-                  filteredStations.length,
+                        itemCount:
+                            filteredStations
+                                .length,
 
-              itemBuilder:
-                  (context, index) {
+                        itemBuilder:
+                            (context,
+                                index) {
+                          final station =
+                              filteredStations[
+                                  index];
 
-                return StationCard(
-                  stationName:
-                      filteredStations[index],
-                );
-              },
-            ),
+                          return StationCard(
+                            stationName:station["stationName"],
+                            stationId: station["_id"],
+                          );
+                        },
+                      ),
           ),
         ],
       ),
@@ -224,44 +269,50 @@ class _StationListScreenState
 
 class StationCard extends StatelessWidget {
   final String stationName;
+  final String stationId;
 
   const StationCard({
     super.key,
-    required this.stationName,
+     required this.stationId,
+  required this.stationName,
   });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () {
-
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) =>
                 StationDetailsScreen(
-              stationName: stationName,
+               stationId: stationId,
             ),
           ),
         );
-
       },
 
       child: Card(
         elevation: 1,
 
         margin:
-            const EdgeInsets.only(bottom: 12),
+            const EdgeInsets.only(
+          bottom: 12,
+        ),
 
         shape:
             RoundedRectangleBorder(
           borderRadius:
-              BorderRadius.circular(14),
+              BorderRadius.circular(
+            14,
+          ),
         ),
 
         child: ListTile(
           contentPadding:
-              const EdgeInsets.all(12),
+              const EdgeInsets.all(
+            12,
+          ),
 
           leading: Container(
             height: 45,
@@ -271,10 +322,10 @@ class StationCard extends StatelessWidget {
                 BoxDecoration(
               color:
                   Colors.blue.shade50,
-
               borderRadius:
                   BorderRadius.circular(
-                      10),
+                10,
+              ),
             ),
 
             child: const Icon(
@@ -294,16 +345,13 @@ class StationCard extends StatelessWidget {
 
           subtitle: const Column(
             crossAxisAlignment:
-                CrossAxisAlignment.start,
+                CrossAxisAlignment
+                    .start,
 
             children: [
-
               SizedBox(height: 5),
-
               Text("Tamil Nadu"),
-
               SizedBox(height: 3),
-
               Text(
                 "● Available",
                 style: TextStyle(
@@ -321,4 +369,4 @@ class StationCard extends StatelessWidget {
       ),
     );
   }
-}
+} 

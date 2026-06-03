@@ -1,7 +1,7 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'home_screen.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'home_screen.dart';
 
 class DetectingLocationScreen extends StatefulWidget {
   const DetectingLocationScreen({super.key});
@@ -47,6 +47,25 @@ class _DetectingLocationScreenState extends State<DetectingLocationScreen> {
 
       print("Latitude: ${position.latitude}");
       print("Longitude: ${position.longitude}");
+      String district = "";
+      try {
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
+
+        print("Placemark Count: ${placemarks.length}");
+
+        if (placemarks.isNotEmpty) {
+          district = placemarks.first.subAdministrativeArea ?? "";
+          print("District: ${placemarks.first.subAdministrativeArea}");
+          print("Locality: ${placemarks.first.locality}");
+          print("State: ${placemarks.first.administrativeArea}");
+          print("District: $district");
+        }
+      } catch (e) {
+        print("GEOCODING ERROR: $e");
+      }
 
       print("STEP 4 - Navigating Home");
 
@@ -54,10 +73,17 @@ class _DetectingLocationScreenState extends State<DetectingLocationScreen> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => HomeScreen(district: district)),
       );
     } catch (e) {
       print("LOCATION ERROR: $e");
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
     }
   }
 
