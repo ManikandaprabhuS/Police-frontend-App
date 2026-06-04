@@ -68,8 +68,62 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
+  return Scaffold(
+    backgroundColor: Colors.white,
+
+    body: Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+
+        child: Column(
+          mainAxisAlignment:
+              MainAxisAlignment.center,
+
+          children: [
+            Image.asset(
+              'assets/images/tn_police_logo.png',
+              height: 100,
+            ),
+
+            const SizedBox(height: 30),
+
+            const CircularProgressIndicator(),
+
+            const SizedBox(height: 25),
+
+            const Text(
+              "Loading Police Directory",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            const Text(
+              "Fetching districts and station records from server...",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey,
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            const Text(
+              "Please wait a few seconds",
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
     return Scaffold(
       backgroundColor: Colors.white,
 
